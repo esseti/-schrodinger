@@ -8,6 +8,7 @@ def _read_status_time(filename):
     """
     Gets the last status and time
     """
+    os.chdir(cfg['FOLDER'])
     f = open(filename, 'r')
     lineList = f.readlines()
     last = lineList[-1]
@@ -18,6 +19,7 @@ def _read_status_time(filename):
 
 
 def _write(filename, status, now):
+    os.chdir(cfg['FOLDER'])
     f = open(filename, 'a')
     f.writelines(status + "$" + now.strftime('%H:%M') + '\n')
     f.close()
@@ -27,7 +29,8 @@ def logit(d):
     """
     write the log
     """
-    f = open(cfg["FOLDER"] + 'log.log', 'a')
+    os.chdir(cfg['FOLDER'])
+    f = open('log.log', 'a')
     f.writelines(d + "\n")
     f.close()
 
@@ -46,7 +49,9 @@ if __name__ == '__main__':
     now = datetime.now()
     now_time = datetime.strptime(now.strftime("%H:%M"), "%H:%M")
 
-    filename = cfg["FOLDER"] + now.strftime('%Y%m%d') + ".txt"
+    filename = now.strftime('%Y%m%d') + ".txt"
+    if cfg["DEBUG"]:
+        print(filename)
     _init(filename, status, now)
     old_status, time = _read_status_time(filename)
     delta = ((now_time - time).total_seconds())
@@ -57,5 +62,5 @@ if __name__ == '__main__':
     else:
         if cfg["DEBUG"]:
             s = "%s %s %s %s" % (now.strftime("%H:%M"), old_status, status, delta)
-            logit(s)
+            print(s)
         _write(filename, status, now)
