@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.stefanotranquillini.sleepwatcher</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/local/sbin/sleepwatcher</string>
+		<string>-V</string>
+		<string>-s <FULL PATH TO YOUR HOME FOLDER>.sleep</string>
+		<string>-w <FULL PATH TO YOUR HOME FOLDER>.wakeup</string>
+		<string>-t 300</string>
+		<string>-i <FULL PATH TO YOUR HOME FOLDER>.sleep</string>
+		<string>-R <FULL PATH TO YOUR HOME FOLDER>.wakeup</string>
+        <string>-D <FULL PATH TO YOUR HOME FOLDER>.sleep</string>
+        <string>-W <FULL PATH TO YOUR HOME FOLDER>.wakeup</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+</dict>
+</plist>

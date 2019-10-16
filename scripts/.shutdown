@@ -1,0 +1,25 @@
+#!/bin/bash
+#
+function shutdown()
+{
+ echo `date` " " `whoami` " Received a signal to shutdown"
+ python <FULL PATH TO YOUR PROJECT FOLDER>/status.py SHUTDOWN
+
+
+  exit 0
+}
+
+function startup()
+{
+   echo `date` " " `whoami` " Starting..."
+
+  python <FULL PATH TO YOUR PROJECT FOLDER>/status.py STARTUP
+
+  tail -f /dev/null &
+  wait $!
+}
+
+trap shutdown SIGTERM
+trap shutdown SIGKILL
+
+startup;
