@@ -1,3 +1,0 @@
-#!/bin/bash
-#
-python <FULL PATH TO YOUR PROJECT FOLDER>/status.py SLEEP

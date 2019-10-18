@@ -4,8 +4,14 @@ import sys
 import argparse
 from datetime import datetime
 from datetime import timedelta
-from termcolor import colored
 from config import cfg
+try:
+    from termcolor import colored
+except:
+    print("INSTALL TERMCOLOR")
+    def colored(s, **kwargs):
+        print(s)
+
 
 argparser = argparse.ArgumentParser(description="Show presence")
 
@@ -31,7 +37,10 @@ def read_file(lines):
     r = []
     for line in lines:
         s, t = line.split('$')
-        d = dict(time=datetime.strptime(t.strip(), "%H:%M"), status=s)
+        t = t.strip()
+        if len(t) > 5:
+            t = t[:-3]
+        d = dict(time=datetime.strptime(t, "%H:%M"), status=s)
         r.append(d)
     return r
 
@@ -42,10 +51,11 @@ def mins(td):
     """
     return td.total_seconds() / 60
 
+
 def print_h_inline(minute, t_beg=8, t_end=20):
     # prints the title
     # this computes how many char there must be for each our
-    pixels =  60 // minutes
+    pixels = 60 // minutes
     # left part is filename + >: that is 10 chars
     print(" " * 10, end="")
     for i in range(t_beg, t_end):
@@ -83,8 +93,8 @@ def print_minute(m, status, detail=False):
     statuses = {
         'ACTIVE': ['grey', 'on_green'],
         'SLEEP': ['grey', 'on_red'],
-        "SHUTDOWN":['magenta',None ],
-        "STARTUP":['yellow',None]
+        "SHUTDOWN": ['magenta', None],
+        "STARTUP": ['yellow', None]
     }
     data_status = statuses.get(status, ['white', None])
     attrs = []
@@ -134,14 +144,14 @@ def print_summary(present, away, total):
     total += away + present or 1.0
     str_t = str_print(total)
     str_percentage = str_percent_print(present, total)
-    print("["+colored(f"{str_p}/", "green")
+    print("[" + colored(f"{str_p}/", "green")
           + colored(f"{str_a}", "red")
           + colored(f"|{str_t}|", "blue")
-          + colored(f"({str_percentage}%)", "grey","on_green")
-          +"]")
+          + colored(f"({str_percentage}%)", "grey", "on_green")
+          + "]")
 
 
-def print_day(name, data, minutes,t_beg, t_end, detail=False):
+def print_day(name, data, minutes, t_beg, t_end, detail=False):
     # print the data of the day
     present = 0
     away = 0
@@ -179,7 +189,7 @@ if __name__ == '__main__':
 
     if not detail:
         # prints the hour inline, calulate the size of each minute in pixels
-        print_h_inline( minutes,  t_beg=beg, t_end=end)
+        print_h_inline(minutes,  t_beg=beg, t_end=end)
     if args.all:
         # if all, print all files it founds
         for file in sorted(glob.glob("*.txt")):

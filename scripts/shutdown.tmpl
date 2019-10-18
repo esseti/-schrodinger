@@ -3,7 +3,7 @@
 function shutdown()
 {
  echo `date` " " `whoami` " Received a signal to shutdown"
- python <FULL PATH TO YOUR PROJECT FOLDER>/status.py SHUTDOWN
+ python ${PRJ}/status.py SHUTDOWN
 
 
   exit 0
@@ -13,8 +13,7 @@ function startup()
 {
    echo `date` " " `whoami` " Starting..."
 
-  python <FULL PATH TO YOUR PROJECT FOLDER>/status.py STARTUP
-
+ # nothing to do here  
   tail -f /dev/null &
   wait $!
 }
