@@ -56,16 +56,7 @@ if __name__ == '__main__':
     if cfg["DEBUG"]:
         print(filename)
     _init(filename, status, now)
-    old_status, time = _read_status_time(filename)
-    delta = ((now_time - time).total_seconds())
     if cfg["DEBUG"]:
         s = "%s %s %s %s %s" % (now.strftime("%H:%M"), old_status, status, status==old_status, delta)
         print(s)
-    if status == old_status:
-        if cfg['DEBUG']:
-            print("skipping")
-        # no new status no party
-    else:
-        if cfg['DEBUG']:
-            print("printing")
-        _write(filename, status, now)
+    _write(filename, status, now)
