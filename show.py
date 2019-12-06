@@ -24,7 +24,7 @@ argparser.add_argument('-m', type=int, dest='min',
                        help="minutes per slot", required=False)
 argparser.add_argument('-d',  dest='day',
                        help="specify day YYYYMMDD", required=False)
-argparser.add_argument('-dd',  dest='diffday',
+argparser.add_argument('-s',  dest='subtract',
                        help="Diff day: how many days subtracted from today (-1=yesterday)", required=False)
 argparser.add_argument('-c', action="store_false", dest='detail',
                        help="Compact view of the day, default is detailed", required=False)
@@ -38,6 +38,8 @@ argparser.add_argument('-dc', dest='detail_category',
                        help="Do NOT show the detail per category", action='store_false', required=False)
 argparser.add_argument('-l', dest='daily_log',
                        help="Print detail of the daily log to be copied.", action='store_true', required=False)
+argparser.add_argument('--cron', dest='cron',
+                       help="cron notification", action='store_true', required=False)
 args = argparser.parse_args()
 
 
@@ -191,11 +193,11 @@ def print_summary(present, away, total):
     total += away + present or 1.0
     str_t = str_print(total)
     str_percentage = str_percent_print(present, total)
-    print("[" + colored(f"{str_p}/", "green")
-          + colored(f"{str_a}", "red")
-          + colored(f"|{str_t}|", "blue")
-          + colored(f"({str_percentage})", "grey", "on_green")
-          + "]")
+    print("[" + colored(f"{str_p}/", "green") +
+          colored(f"{str_a}", "red") +
+          colored(f"|{str_t}|", "blue") +
+          colored(f"({str_percentage})", "grey", "on_green") +
+          "]")
 
 
 def print_day(name, data, minutes, t_beg, t_end, detail=False, log_data=[],
@@ -204,8 +206,10 @@ def print_day(name, data, minutes, t_beg, t_end, detail=False, log_data=[],
     present = 0
     away = 0
     total = 0
-    time_spent = dict(NOCAT=dict(minutes=0,detail="",index='-',away=0))
+    time_spent = dict(NOCAT=dict(minutes=0, detail="", index='-', away=0))
     hourly_data = dict()
+    start_time = None
+    end_time = None
     # not deail have the hours on top as header
     if not detail:
         my_date = datetime.strptime(name.split('.')[0], "%Y%m%d")
@@ -236,6 +240,10 @@ def print_day(name, data, minutes, t_beg, t_end, detail=False, log_data=[],
             first = False
 
             if status == "ACTIVE":
+                if not start_time:
+                    start_time = f"{h}:{m}"
+
+                end_time = f"{h}:{m}"
                 present += minutes
                 first = old_log != log
                 time_spent[log]['minutes'] = time_spent[log]['minutes'] + 1
@@ -247,7 +255,8 @@ def print_day(name, data, minutes, t_beg, t_end, detail=False, log_data=[],
                     hourly_data[str(h)][time_spent[log]
                                         ['index']]['active'] += 1
                 except:
-                    hourly_data[str(h)][time_spent[log]['index']] = dict(active=1,sleep=0)
+                    hourly_data[str(h)][time_spent[log]['index']
+                                        ] = dict(active=1, sleep=0)
             elif status == "SLEEP":
                 # we keep track of the time of the task as well, maybe is a task away from the pc
                 away += minutes
@@ -261,12 +270,10 @@ def print_day(name, data, minutes, t_beg, t_end, detail=False, log_data=[],
                 try:
                     hourly_data[str(h)][time_spent[log]['index']]['sleep'] += 1
                 except:
-                    hourly_data[str(h)][time_spent[log]['index']]=dict(sleep=1,active=0)
+                    hourly_data[str(h)][time_spent[log]['index']
+                                        ] = dict(sleep=1, active=0)
 
             print_minute(m, status, detail, log_str, first)
-        if detail_hour:
-            # print(hourly_data)
-            print_hourly_data(hourly_data[str(h)])
 
         if detail:
             print("")
@@ -277,40 +284,53 @@ def print_day(name, data, minutes, t_beg, t_end, detail=False, log_data=[],
     else:
         if detail_category:
             print_spent(time_spent, total + present)
-    print_summary(present, away, total)
 
     if daily_log:
-        print_daily_log(hourly_data,time_spent,t_beg, t_end, present+away)
+        print_daily_log(hourly_data, time_spent, t_beg, t_end,
+                        start_time, end_time, present + away)
+        print("")
+    else:
+        for h in range(int(t_beg), int(t_end)):
+            print(colored(f"{int(h):02d}:", "grey", "on_blue"), end='')
+            print_hourly_data(hourly_data[str(h)], time_spent)
+            print("")
 
-def print_daily_log(hd,ld,start,end,total):
+    print_summary(present, away, total)
+
+
+def print_daily_log(hd, ld, start, end, start_time, end_time, total):
+    print(start_time)
     index_name = dict()
     elements = {}
-    # print(ld)
-    for k,v in ld.items():
+    # # print(ld)
+    for k, v in ld.items():
         # print(v)
-        index_name[v['index']]=k
-    for i in range(int(start),int(end)):
-        hour_data = hd.get(str(i))
+        index_name[v['index']] = k
+    for h in range(int(start), int(end)):
+
+        hour_data = hd.get(str(h))
         if hour_data:
-            print(f"{i}:",end='')
+            print(f"{h}:", end='')
+    #
             try:
-                for k,v in hour_data.items():
+                for k, v in hour_data.items():
                     name = index_name[k].capitalize()
-                    spent= v.get('active',0)+v.get('sleep',0)
-                    print(f"{name}({str_percent_print((spent),60,space=False)})",end=" ")
+                    spent = v.get('active', 0) + v.get('sleep', 0)
+                    print(f"{name} ({str_print(spent)}|{str_percent_print((spent),60,space=False)})", end=" ")
                     if name in elements:
-                        elements[name]+=spent
+                        elements[name] += spent
                     else:
-                        elements[name]=spent
+                        elements[name] = spent
             except:
                 pass
             print()
-    print("ALL:", end='')
-    for i,v in elements.items():
-        print(f"{i}({str_percent_print(v,total,space=False)})",end=" ")
+    print(end_time)
+    print()
+    for i, v in elements.items():
+        print(f"{i} ({str_print(v)}|{str_percent_print(v,total,space=False)})| ", end="")
 
 
-def print_hourly_data(hourly_data):
+def print_hourly_data(hourly_data, ld):
     hourly_data = dict(
         sorted(hourly_data.items(), key=lambda t: t[1]['active'], reverse=True))
     logged_sum = sum(time['active'] for _, time in hourly_data.items())
@@ -327,7 +347,11 @@ def print_hourly_data(hourly_data):
                               3:], 'grey', 'on_green')
         else:
             present = colored(str_print(time.get('active', 0))[3:], 'green')
-        print(f"{colored(log,'magenta')} {present}|{away}|{colored(str_percent_print(time.get('active',0),60, reverse=True),'green')}", end=' ')
+        name = ""
+        for k, v in ld.items():
+            if v['index'] == log:
+                name = k
+        print(f"{colored(name,'magenta'):<17} {present}|{away}|{colored(str_percent_print(time.get('active',0),60, reverse=True),'green')}", end=' ')
 
 
 def print_spent(data, real_total):
@@ -339,13 +363,13 @@ def print_spent(data, real_total):
         total += item['minutes']
         away += item.get('away', 0)
 
-        print(f"{colored(item['index'],'magenta')}\t{colored(str_print(item['minutes']),'green')}|{colored(str_print(item.get('away',0)),'red')}|{colored(str_print(item.get('away',0)+item.get('minutes',0)),'blue')} ({colored(str_percent_print(item['minutes'],real_total),'blue')})",
+        print(f"{colored(item['index'],'magenta'):}\t{colored(str_print(item['minutes']),'green')}|{colored(str_print(item.get('away',0)),'red')}|{colored(str_print(item.get('away',0)+item.get('minutes',0)),'blue')} ({colored(str_percent_print(item['minutes'],real_total),'blue')})",
               "\t" + status,
               f"\t\t{item.get('detail','-')}")
     print("-" * 80)
 
 
-def _load_file(file, log=False):
+def _load_file(file, log=False, today=False):
     try:
         f = open(file, 'r')
         data = f.readlines()
@@ -359,6 +383,18 @@ def _load_file(file, log=False):
     except:
         return []
 
+def percent(start, workday=8):
+    now_dt = datetime.now()
+    now = datetime.strptime(f"{now_dt.hour}:{now_dt.minute}", "%H:%M")
+    start = start
+    end = start + timedelta(hours=workday)
+    total = mins(end-start)
+    spent = mins(now-start)
+    percent = float(float(spent)/float(total))
+    percent = round(percent*100)
+    import osascript
+    code,out,err = osascript.run(f'display notification "spent {percent}%" with title "{now.hour}:{now.minute} ({start.strftime("%H:%M")}-{end.strftime("%H:%M")})" ')
+
 
 if __name__ == '__main__':
     args = argparser.parse_args()
@@ -370,9 +406,15 @@ if __name__ == '__main__':
     dc = args.detail_category
     daily_log = args.daily_log
     os.chdir(cfg['FOLDER'])
+    if args.cron:
+        day = datetime.now()
+        day = day.strftime('%Y%m%d')
+        data = _load_file("%s.txt" % (day), today=True)
+        # print(data)
+        start = data[0]['time']
+        percent(start)
 
-
-    if args.all:
+    elif args.all:
         # if all, print all files it founds
         print_h_inline(minutes,  t_beg=beg, t_end=end)
         for file in sorted(glob.glob("*.txt")):
@@ -380,7 +422,7 @@ if __name__ == '__main__':
                 f = open(file, 'r')
                 data = read_file(f.readlines())
                 print_day(file, data, minutes, detail=False,
-                          t_beg=beg, t_end=end,detail_hour=False)
+                          t_beg=beg, t_end=end, detail_hour=False)
                 f.close()
     else:
         # single day printing
@@ -391,20 +433,20 @@ if __name__ == '__main__':
             print(day)
         else:
             day = datetime.now()
-            if args.diffday:
-                day -= timedelta(days=int(args.diffday))
+            if args.subtract:
+                day -= timedelta(days=int(args.subtract))
                 today = False
             day = day.strftime('%Y%m%d')
-            print(day)
-        data = _load_file("%s.txt" % (day))
-
+        data = _load_file("%s.txt" % (day), today=today)
+        print(data)
         # when we have the datil, we set to 1 minute window . we said detail ;)
         if detail:
             minutes = 1
             log_data = _load_file("%s_log.txt" % (day), log=True)
             print_day(day, data, minutes, detail=True,
                       t_beg=beg, t_end=end, log_data=log_data, detail_hour=dh,
-                      detail_category=dc, daily_log = daily_log)
+                      detail_category=dc, daily_log=daily_log)
         else:
             print_h_inline(minutes,  t_beg=beg, t_end=end)
-            print_day(day, data, minutes, detail=False, t_beg=beg, t_end=end,detail_hour=False)
+            print_day(day, data, minutes, detail=False,
+                      t_beg=beg, t_end=end, detail_hour=False)
