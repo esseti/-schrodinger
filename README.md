@@ -9,9 +9,12 @@ it does so by tracking:
 
 It's written in python and uses few plist to trigger the scripts.
 
+## log
+the new version also manages logs, so you can log your activity in a semi-autoamted way, check log.py (with `-t` `-s` options)
+
 ## Demo
 [![asciicast](https://asciinema.org/a/lUJejik5apHJIA8wI8H9S98K0.svg)](https://asciinema.org/a/lUJejik5apHJIA8wI8H9S98K0)
-
+(this needs to be updated)
 
 ## Install
 The script to create the files (`status.py`) is in python2, compatible with python3
@@ -45,12 +48,4 @@ Now, every time your screen sleeps or you start/shutdown the MAC you will find a
 
 - install the `requirements.txt`
 - launch `python3 show.py` (you can make an alias)
-
-the parameters are the following:
-
-- `-a`: prints all the day that are found in the `DATA FOLDER`
-- `-m`: the interval in minute, default is `5` for small terminal use `10` or more
-- `-d`: the day to print, in the form of `YYYYMMDD` if not specified, it's `today`
-- `-v`: enable the `verbose version`, works only for single day (not with the `-a`)
-- `-b`: the hour from where the printing start (default `8`)
-- `-e`: the hour till the print ends (default: `20`)
+(use -h to see the options.)
