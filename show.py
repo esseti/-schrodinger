@@ -327,7 +327,12 @@ def print_daily_log(hd, ld, start, end, start_time, end_time, total):
     print(end_time)
     print()
     for i, v in elements.items():
-        print(f"{i} ({str_print(v)}|{str_percent_print(v,total,space=False)})| ", end="")
+        print(
+            f"{i} ({str_print(v)}|{str_percent_print(v,total,space=False)})", end="|")
+    print()
+    for i, v in elements.items():
+        print(
+            f"{i}", end="|")
 
 
 def print_hourly_data(hourly_data, ld):
@@ -393,7 +398,7 @@ def percent(start, workday=8):
     percent = float(float(spent)/float(total))
     percent = round(percent*100)
     import osascript
-    code,out,err = osascript.run(f'display notification "spent {percent}%" with title "{now.hour}:{now.minute} ({start.strftime("%H:%M")}-{end.strftime("%H:%M")})" ')
+    code, out, err = osascript.run(f'display notification "spent {percent}%" with title "{now.strftime("%H")}:{now.strftime("%M")} ({start.strftime("%H:%M")}-{end.strftime("%H:%M")})" ')
 
 
 if __name__ == '__main__':
@@ -410,7 +415,6 @@ if __name__ == '__main__':
         day = datetime.now()
         day = day.strftime('%Y%m%d')
         data = _load_file("%s.txt" % (day), today=True)
-        # print(data)
         start = data[0]['time']
         percent(start)
 
@@ -430,15 +434,15 @@ if __name__ == '__main__':
         if args.day:
             day = args.day
             today = False
-            print(day)
         else:
             day = datetime.now()
             if args.subtract:
                 day -= timedelta(days=int(args.subtract))
                 today = False
             day = day.strftime('%Y%m%d')
+        
+        print(day)
         data = _load_file("%s.txt" % (day), today=today)
-        print(data)
         # when we have the datil, we set to 1 minute window . we said detail ;)
         if detail:
             minutes = 1
