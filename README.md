@@ -13,8 +13,7 @@ It's written in python and uses few plist to trigger the scripts.
 the new version also manages logs, so you can log your activity in a semi-autoamted way, check log.py (with `-t` `-s` options)
 
 ## Demo
-[![asciicast](https://asciinema.org/a/lUJejik5apHJIA8wI8H9S98K0.svg)](https://asciinema.org/a/lUJejik5apHJIA8wI8H9S98K0)
-(this needs to be updated)
+[![asciicast](https://asciinema.org/a/294226.svg)](https://asciinema.org/a/294226)
 
 ## Install
 The script to create the files (`status.py`) is in python2, compatible with python3

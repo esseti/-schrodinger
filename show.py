@@ -201,7 +201,7 @@ def print_summary(present, away, total):
 
 
 def print_day(name, data, minutes, t_beg, t_end, detail=False, log_data=[],
-              detail_hour=True, detail_category=True, daily_log=False):
+              detail_hour=True, detail_category=True, daily_log=False, summary=True):
     # print the data of the day
     present = 0
     away = 0
@@ -279,23 +279,26 @@ def print_day(name, data, minutes, t_beg, t_end, detail=False, log_data=[],
             print("")
         else:
             print(" ", end="")
+    print("")
+
     if not detail:
-        print(" ", end="")
+        print("", end="")
     else:
         if detail_category:
             print_spent(time_spent, total + present)
 
-    if daily_log:
-        print_daily_log(hourly_data, time_spent, t_beg, t_end,
-                        start_time, end_time, present + away)
-        print("")
-    else:
-        for h in range(int(t_beg), int(t_end)):
-            print(colored(f"{int(h):02d}:", "grey", "on_blue"), end='')
-            print_hourly_data(hourly_data[str(h)], time_spent)
+    if summary:
+        if daily_log:
+            print_daily_log(hourly_data, time_spent, t_beg, t_end,
+                            start_time, end_time, present + away)
             print("")
-
-    print_summary(present, away, total)
+        else:
+            for h in range(int(t_beg), int(t_end)):
+                print(colored(f"{int(h):02d}:", "grey", "on_blue"), end='')
+                print_hourly_data(hourly_data[str(h)], time_spent)
+                print("")
+        print_summary(present, away, total)
+        
 
 
 def print_daily_log(hd, ld, start, end, start_time, end_time, total):
@@ -426,7 +429,7 @@ if __name__ == '__main__':
                 f = open(file, 'r')
                 data = read_file(f.readlines())
                 print_day(file, data, minutes, detail=False,
-                          t_beg=beg, t_end=end, detail_hour=False)
+                          t_beg=beg, t_end=end, detail_hour=False, detail_category=False, summary=False)
                 f.close()
     else:
         # single day printing
@@ -441,10 +444,10 @@ if __name__ == '__main__':
                 today = False
             day = day.strftime('%Y%m%d')
         
-        print(day)
         data = _load_file("%s.txt" % (day), today=today)
         # when we have the datil, we set to 1 minute window . we said detail ;)
         if detail:
+            print(day)
             minutes = 1
             log_data = _load_file("%s_log.txt" % (day), log=True)
             print_day(day, data, minutes, detail=True,
