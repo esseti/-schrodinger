@@ -244,7 +244,10 @@ def print_day(name, data, minutes, t_beg, t_end, detail=False, log_data=[],
                     start_time = f"{h}:{m}"
 
                 end_time = f"{h}:{m}"
-                present += minutes
+                if not log.startswith('-'):
+                    present += minutes
+                else:
+                    away += minutes
                 first = old_log != log
                 time_spent[log]['minutes'] = time_spent[log]['minutes'] + 1
                 if log_det not in time_spent[log]['detail']:
@@ -330,11 +333,13 @@ def print_daily_log(hd, ld, start, end, start_time, end_time, total):
     print(end_time)
     print()
     for i, v in elements.items():
-        print(
+        if not i.startswith('-'):
+            print(
             f"{i} ({str_print(v)}|{str_percent_print(v,total,space=False)})", end="|")
     print()
     for i, v in elements.items():
-        print(
+        if not i.startswith('-'):
+            print(
             f"{i}", end="|")
 
 
