@@ -530,4 +530,3 @@ if __name__ == '__main__':
             print_day(name=day, data=data, minutes=minutes, t_beg=beg,
                       t_end=end)
 
-# sul daily ci siamo, c'e' da sistemare l'all e fare il giro con i commenti
