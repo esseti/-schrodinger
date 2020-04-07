@@ -43,8 +43,31 @@ the `show.py` script is python3 only
 
 Now, every time your screen sleeps or you start/shutdown the MAC you will find an entry in a file in the `DATA FOLDER`. The file has `YYYYMMDD` as name. -->
 
+### For logging data
+- launch `python3 log.py` (you can make an alias)
+
+the parameters are the following:
+
+- `-s`: how many mitues ago it started
+- `-t`: when it started (hh:mm)
+- `--last`: use as description the previous status (eg: you did `writing` then `lunch` with --last it stores `writing`. It ignores `-` status)
+
+Note: status starting with `-` will be set as `sleep`
+
 ### For displaying the data
 
 - install the `requirements.txt`
 - launch `python3 show.py` (you can make an alias)
-(use -h to see the options.)
+
+the parameters are the following:
+
+- `-a`: prints all the day that are found in the `DATA FOLDER`
+- `-m`: the interval in minute, default is `5` for small terminal use `10` or more
+- `-d`: the day to print, in the form of `YYYYMMDD` if not specified, it's `today`
+- `-v`: enable the `verbose version`, works only for single day (not with the `-a`)
+- `-b`: the hour from where the printing start (default `8`)
+- `-e`: the hour till the print ends (default: `20`)
+- `-dh`: Do NOT show the detail per hour
+- `-dc`: Do NOT show the detail per category
+- `-l`: Print detail of the daily log to be easily copied.
+- `--cron`:  cron notification for OSX
