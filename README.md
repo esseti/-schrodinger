@@ -41,6 +41,17 @@ the `show.py` script is python3 only
 
 Now, every time your screen sleeps or you start/shutdown the MAC you will find an entry in a file in the `DATA FOLDER`. The file has `YYYYMMDD` as name. -->
 
+### For logging data
+- launch `python3 log.py` (you can make an alias)
+
+the parameters are the following:
+
+- `-s`: how many mitues ago it started
+- `-t`: when it started (hh:mm)
+- `--last`: use as description the previous status (eg: you did `writing` then `lunch` with --last it stores `writing`. It ignores `-` status)
+
+Note: status starting with `-` will be set as `sleep`
+
 ### For displaying the data
 
 - install the `requirements.txt`
