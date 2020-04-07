@@ -65,3 +65,7 @@ the parameters are the following:
 - `-v`: enable the `verbose version`, works only for single day (not with the `-a`)
 - `-b`: the hour from where the printing start (default `8`)
 - `-e`: the hour till the print ends (default: `20`)
+- `-dh`: Do NOT show the detail per hour
+- `-dc`: Do NOT show the detail per category
+- `-l`: Print detail of the daily log to be easily copied.
+- `--cron`:  cron notification for OSX
