@@ -135,7 +135,13 @@ def print_minute(m, status, detail=False, str_to_print='', first=False,
         "SHUTDOWN": ['magenta', None],
         "STARTUP": ['yellow', None]
     }
-    data_status = statuses.get(status['status'], ['white', None])
+    # here we receive a dict or a key, depends if it's computed
+    # or from file (-a -c)
+    if type(status) == dict:
+        sta = status['status']
+    else:
+        sta = status
+    data_status = statuses.get(sta, ['white', None])
     attrs = []
     s = f'{int(m):02d}'
     if detail:
@@ -212,124 +218,100 @@ def print_summary(present, away, total):
           "]")
 
 
-def print_day()
+def print_day(name, t_beg, t_end, minutes, data):
+    """
+    Print the inline day
+
+    :param name:
+    :param t_beg:
+    :param t_end:
+    :param minutes:
+    :param data:
+    :return:
+    """
+    my_date = datetime.strptime(name.split('.')[0], "%Y%m%d")
+    day_week = calendar.day_name[my_date.weekday()][0]
+    print(name.split('.')[0] + day_week, end=" ")
+    for h in range(t_beg, t_end):
+        for m in range(0, 60, minutes):
+            status, _, _ = get_status(h, m, data)
+            print_minute(m, status)
+        print(" ", end="")
+    print("")
 
 
-    def print_day_datail(daily_data, hourly_data, minute_data, time_spent,
-                         t_beg, t_end,
-                         detail=False,
-                         detail_hour=True, detail_category=True,
-                         daily_log=False):
-        # print the data of the day
-        # not deail have the hours on top as header
-        # if not detail:
-        #     my_date = datetime.strptime(name.split('.')[0], "%Y%m%d")
-        #     day_week = calendar.day_name[my_date.weekday()][0]
-        #     print(name.split('.')[0] + day_week, end=" ")
+def print_day_datail(daily_data, hourly_data, minute_data, time_spent,
+                     t_beg, t_end,
+                     detail=False, detail_category=True,
+                     daily_log=False):
+    """
+    print the minute by minute day, plust deatils and the rest
 
-        # loop for all the time and minutes (in step of 60/delta minutes)
-        # for h in range(8, 20):
-        #     hourly_data[str(h)] = dict()
-        #     # detail have hours on the left side.
-        #     if detail:
-        #         print(colored(f"{int(h):02d}:", "grey", "on_blue"), end='')
-        #     for m in range(0, 60, minutes):
-        #         log_str = ""
-        #         # find the status of that time and prints it.
-        #         status, _, _ = get_status(h, m, data)
-        #         # find what's the log, if any
-        #         log, _, log_det = get_status(h, m, log_data, True)
-        #         # init time spent if does not exists
-        #         if log not in time_spent:
-        #             if log != "NOCAT":
-        #                 index = chr(i + 65)
-        #                 i += 1
-        #                 time_spent[log] = dict(
-        #                     minutes=0, away=0, index=index, detail="")
-        #         first = False
-
-        #         if status == "ACTIVE":
-        #             if not start_time:
-        #                 start_time = f"{h}:{m}"
-
-        #             end_time = f"{h}:{m}"
-        #             present += minutes
-        #             first = old_log != log
-        #             time_spent[log]['minutes'] = time_spent[log]['minutes'] + 1
-        #             if log_det not in time_spent[log]['detail']:
-        #                 time_spent[log]['detail'] += log_det
-        #             log_str = time_spent[log]['index']
-        #             old_log = log
-        #             try:
-        #                 hourly_data[str(h)][time_spent[log]
-        #                                     ['index']]['active'] += 1
-        #             except:
-        #                 hourly_data[str(h)][time_spent[log]['index']
-        #                                     ] = dict(active=1, sleep=0)
-        #         elif status == "SLEEP":
-        #             # we keep track of the time of the task as well, maybe is a task away from the pc
-        #             away += minutes
-        #             first = old_log != log
-        #             time_spent[log]['away'] = time_spent[log]['away'] + 1
-        #             if log_det not in time_spent[log]['detail']:
-        #                 time_spent[log]['detail'] += log_det
-        #             log_str = time_spent[log]['index']
-        #             old_log = log
-
-        #             try:
-        #                 hourly_data[str(h)][time_spent[log]['index']]['sleep'] += 1
-        #             except:
-        #                 hourly_data[str(h)][time_spent[log]['index']
-        #                                     ] = dict(sleep=1, active=0)
-        old = ""
-        first = False
-        for time_data, status_data in minute_data.items():
-            # key is h:m
-            h, m = time_data.split(':')
-            if int(m) == 59:
-                end = '\n'
-            else:
-                end = ''
-            # the check is to understand if a "we should print the start"
-            str_to_print = time_spent[status_data['cat']]['index']
-
-            if old:
-                first = old != status_data['cat']
-            print_minute(m, status_data, detail, str_to_print, first, end=end)
-            old = status_data['cat']
-
-        #     if detail:
-        #         print("")
-        #     else:
-        #         print(" ", end="")
-        if not detail:
-            print(" ", end="")
+    :param daily_data:
+    :param hourly_data:
+    :param minute_data:
+    :param time_spent:
+    :param t_beg:
+    :param t_end:
+    :param detail:
+    :param detail_category:
+    :param daily_log:
+    :return:
+    """
+    old = ""
+    first = False
+    for time_data, status_data in minute_data.items():
+        # key is h:m
+        h, m = time_data.split(':')
+        if int(m) == 59:
+            end = '\n'
         else:
-            if detail_category:
-                print_spent(time_spent, daily_data['total'])
+            end = ''
+        # the check is to understand if a "we should print the start"
+        str_to_print = time_spent[status_data['cat']]['index']
 
-        if daily_log:
-            print_daily_log(hourly_data, time_spent, t_beg, t_end,
-                            daily_data['start_time'], daily_data['end_time'],
-                            daily_data['total'])
+        if old:
+            first = old != status_data['cat']
+        print_minute(m, status_data, detail, str_to_print, first, end=end)
+        old = status_data['cat']
+
+    if not detail:
+        print(" ", end="")
+    else:
+        if detail_category:
+            print_spent(time_spent, daily_data['total'])
+
+    if daily_log:
+        print_daily_log(hourly_data, time_spent, t_beg, t_end,
+                        daily_data['start_time'], daily_data['end_time'],
+                        daily_data['total'])
+        print("")
+    else:
+        for h in range(int(t_beg), int(t_end)):
+            print(colored(f"{int(h):02d}:", "grey", "on_blue"), end='')
+            print_hourly_data(hourly_data[str(h)], time_spent)
             print("")
-        else:
-            for h in range(int(t_beg), int(t_end)):
-                print(colored(f"{int(h):02d}:", "grey", "on_blue"), end='')
-                print_hourly_data(hourly_data[str(h)], time_spent)
-                print("")
 
-        print_summary(daily_data['active'], daily_data['away'], 0)
+    print_summary(daily_data['active'], daily_data['away'], 0)
 
 
 def print_daily_log(hd, ld, start, end, start_time, end_time, total):
+    """
+    THe logs of the day
+
+    :param hd:
+    :param ld:
+    :param start:
+    :param end:
+    :param start_time:
+    :param end_time:
+    :param total:
+    :return:
+    """
     print(start_time)
     index_name = dict()
     elements = {}
-    # # print(ld)
     for k, v in ld.items():
-        # print(v)
-        # if not v['detail'].startswith('-hide'):
         index_name[v['index']] = k
     for h in range(int(start), int(end)):
         hour_data = hd.get(str(h))
@@ -435,9 +417,6 @@ def percent(start, workday=8):
 
 
 def calculate_day(data, minutes, t_beg, t_end, log_data=[]):
-    pass
-
-def calculate_day_detail(data, minutes, t_beg, t_end, log_data=[]):
     """
     This function computes the data used later on
 
@@ -558,7 +537,9 @@ if __name__ == '__main__':
             if "_log" not in file:
                 f = open(file, 'r')
                 data = read_file(f.readlines())
-                print_day(file, data, minutes, t_beg=beg, t_end=end)
+
+                print_day(name=file, data=data, minutes=minutes, t_beg=beg,
+                          t_end=end)
                 f.close()
     else:
         # single day printing
@@ -587,7 +568,7 @@ if __name__ == '__main__':
                              t_end=end)
         else:
             print_h_inline(minutes, t_beg=beg, t_end=end)
-            print_day(day, data, minutes, detail=False,
-                      t_beg=beg, t_end=end, detail_hour=False)
+            print_day(name=day, data=data, minutes=minutes, t_beg=beg,
+                      t_end=end)
 
 # sul daily ci siamo, c'e' da sistemare l'all e fare il giro con i commenti
