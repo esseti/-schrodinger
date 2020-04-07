@@ -1,12 +1,10 @@
 import glob
-import os
-import sys
 import argparse
-from datetime import datetime
-from datetime import timedelta
+from datetime import timedelta, datetime
+import os
 from config import cfg
-from datetime import date
 import calendar
+from utils import _load_file, read_file, mins, get_status,str_percent_print, str_print
 
 try:
     from termcolor import colored
@@ -50,41 +48,12 @@ argparser.add_argument('--cron', dest='cron',
 args = argparser.parse_args()
 
 
-def read_file(lines):
-    """
-    Reads the file and coverst it into a list of dict, [<H:M,STATUS>]
-    """
-    r = []
-    for line in lines:
-        try:
-            s, t = line.split('$')
-            t = t.strip()
-            if len(t) > 5:
-                t = t[:-3]
-            try:
-                s, d = s.split(".")
-            except:
-                d = ""
-            d = dict(time=datetime.strptime(t, "%H:%M"),
-                     status=s.strip(), detail=d.strip())
-            r.append(d)
-        except:
-            pass
-    # todo: order by time
-    r = sorted(r, key=lambda k: k['time'])
-    return r
 
-
-def mins(td):
-    """
-    Transforms the timedlta in muinutes
-    """
-    return td.total_seconds() / 60
 
 
 def print_h_inline(minute, t_beg=8, t_end=20):
-    # prints the title
-    # this computes how many char there must be for each our
+    # prints the title for the compact view
+    # this computes how many chars there must be for each our
     pixels = 60 // minutes
     # left part is filename + >: that is 10 chars
     print(" " * 10, end="")
@@ -95,33 +64,6 @@ def print_h_inline(minute, t_beg=8, t_end=20):
         print(colored('.' * (pixels - 2), "blue"), end=" ")
     print()
 
-
-def get_status(h, m, data, log=False):
-    # get the status in that h: m
-    time = datetime.strptime(f"{h}:{m}", "%H:%M")
-    found = False
-    status = "NOCAT"
-    last = None
-    detail = ""
-    for e in data:
-        #  until we pass the item in the array that are before the one we Look for
-        if time > e['time']:
-            found = True
-        if found:
-            # until the time in the array pass the time we search
-            # so we have the one closer to what we look for
-            if e['time'] > time:
-                # we return the previous status, since the current one is past time
-                return status, time, detail
-        if status:
-            last = status
-        status = e['status'].upper()
-        if status == '-LAST':
-            status = last
-        detail = e.get('detail', "")
-    if log and found:
-        return status, time, detail
-    return "NOCAT", time, detail
 
 
 def print_minute(m, status, detail=False, str_to_print='', first=False,
@@ -164,47 +106,16 @@ def print_minute(m, status, detail=False, str_to_print='', first=False,
     print(colored(s, data_status[0], data_status[1], attrs=attrs), end=end)
 
 
-def str_print(m):
-    """
-    Transform a minute (int) into a HH:MM
-    """
-    res = str(timedelta(minutes=m))[:-3]
-    if len(res) < 5:
-        res = "0" + res
-    return res
 
 
-def str_percent_print(p, t, space=True, reverse=False):
-    """
-    computes percent and add a space, or two to be of 3 chars
-    "8" > "  8"
-    To mantain aligment
-    """
-    p = round((p / t) * 100)
-    res = str(p)
-    if reverse:
-        res = res + "%"
-    if space:
-
-        if p < 10:
-            if reverse:
-                res = res + " "
-            else:
-                res = " " + res
-        if p < 100:
-            if reverse:
-                res = res + " "
-            else:
-                res = " " + res
-    if not reverse:
-        return res + "%"
-    else:
-        return res
 
 
 def print_summary(present, away, total):
     """
     prints the summary
+    ```
+        [03:30/02:30|06:00|( 58%)]
+    ```
     """
     str_p = str_print(present)
     str_a = str_print(away)
@@ -228,6 +139,11 @@ def print_day(name, t_beg, t_end, minutes, data):
     :param minutes:
     :param data:
     :return:
+
+    ```
+                  07 08 09 10 11 12 13 14 15 16 17 18 19 20 21
+        20200407T || || || || || || || || || || || || || || ||
+    ```
     """
     my_date = datetime.strptime(name.split('.')[0], "%Y%m%d")
     day_week = calendar.day_name[my_date.weekday()][0]
@@ -242,17 +158,17 @@ def print_day(name, t_beg, t_end, minutes, data):
 
 def print_day_datail(daily_data, hourly_data, minute_data, time_spent,
                      t_beg, t_end,
-                     detail=False, detail_category=True,
-                     daily_log=False):
+                     daily_log):
+
     """
-    print the minute by minute day, plust deatils and the rest
+    print the minute by minute day, plust deatils and the rest, normal call
 
     :param daily_data:
     :param hourly_data:
     :param minute_data:
     :param time_spent:
-    :param t_beg:
-    :param t_end:
+    :param t_beg: time to start printing (hour)
+    :param t_end: time to end priinting (hour)
     :param detail:
     :param detail_category:
     :param daily_log:
@@ -260,6 +176,7 @@ def print_day_datail(daily_data, hourly_data, minute_data, time_spent,
     """
     old = ""
     first = False
+    detail = True
     for time_data, status_data in minute_data.items():
         # key is h:m
         h, m = time_data.split(':')
@@ -275,18 +192,17 @@ def print_day_datail(daily_data, hourly_data, minute_data, time_spent,
         print_minute(m, status_data, detail, str_to_print, first, end=end)
         old = status_data['cat']
 
-    if not detail:
-        print(" ", end="")
-    else:
-        if detail_category:
-            print_spent(time_spent, daily_data['total'])
+
+    print_spent(time_spent, daily_data['total'])
 
     if daily_log:
+        print("")
         print_daily_log(hourly_data, time_spent, t_beg, t_end,
                         daily_data['start_time'], daily_data['end_time'],
                         daily_data['total'])
         print("")
     else:
+        #prints
         for h in range(int(t_beg), int(t_end)):
             print(colored(f"{int(h):02d}:", "grey", "on_blue"), end='')
             print_hourly_data(hourly_data[str(h)], time_spent)
@@ -295,26 +211,42 @@ def print_day_datail(daily_data, hourly_data, minute_data, time_spent,
     print_summary(daily_data['active'], daily_data['away'], 0)
 
 
-def print_daily_log(hd, ld, start, end, start_time, end_time, total):
+def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, total):
     """
-    THe logs of the day
+    Prints the summary of the day logs in the -l version, easier to copy/paste
 
-    :param hd:
-    :param ld:
+    :param hourly_data:
+    :param time_spent:
     :param start:
     :param end:
     :param start_time:
     :param end_time:
     :param total:
     :return:
+
+
+    ```
+        8:55
+        8:Misc (00:05|8%)
+        9:Misc (01:00|100%)
+        10:Misc (00:42|70%) Exercises (00:18|30%)
+        11:Exercises (00:19|32%) Misc (00:41|68%)
+        12:Misc (00:12|20%) Lunch (00:48|80%)
+        13:Lunch (01:00|100%)
+        14:Misc (00:55|92%)
+        14:54
+
+        Misc (03:35|60%)|Exercises (00:37|10%)|Lunch (01:48|30%)|
+        Misc|Exercises|Lunch|
+    ```
     """
     print(start_time)
     index_name = dict()
     elements = {}
-    for k, v in ld.items():
+    for k, v in time_spent.items():
         index_name[v['index']] = k
     for h in range(int(start), int(end)):
-        hour_data = hd.get(str(h))
+        hour_data = hourly_data.get(str(h))
         if hour_data:
             print(f"{h}:", end='')
             #
@@ -323,7 +255,7 @@ def print_daily_log(hd, ld, start, end, start_time, end_time, total):
                     name = index_name[k].capitalize()
                     spent = v.get('active', 0) + v.get('sleep', 0)
                     print(
-                        f"{name} ({str_print(spent)}|{str_percent_print((spent), 60, space=False)})",
+                        f"{name} ({str_print(spent)}|{str_percent_print(spent, 60, space=False)})",
                         end=" ")
                     if name in elements:
                         elements[name] += spent
@@ -345,6 +277,30 @@ def print_daily_log(hd, ld, start, end, start_time, end_time, total):
 
 
 def print_hourly_data(hourly_data, ld):
+    """
+    prints the hourly data colored
+    :param hourly_data:
+    :param ld:
+    :return:
+
+    ```
+        07:
+        08: MISC     05|00|8%
+        09: MISC     00|00|100%
+        10: MISC     42|00|70%  EXERCISES 00|18|30%
+        11: MISC     41|00|68%  EXERCISES 00|19|32%
+        12: MISC     12|00|20%  LUNCH    00|48|80%
+        13: LUNCH    00|00|100%
+        14: MISC     49|05|90%
+        15:
+        16:
+        17:
+        18:
+        19:
+        20:
+        21:
+    ```
+    """
     hourly_data = dict(
         sorted(hourly_data.items(), key=lambda t: t[1]['active'],
                reverse=True))
@@ -367,11 +323,28 @@ def print_hourly_data(hourly_data, ld):
             if v['index'] == log:
                 name = k
         print(
-            f"{colored(name, 'magenta'):<17} {present}|{away}|{colored(str_percent_print(time.get('active', 0), 60, reverse=True), 'green')}",
+            f"{colored(name, 'magenta'):<17} {present}|{away}|{colored(str_percent_print(time.get('active', 0)+time.get('sleep', 0), 60, reverse=True), 'green')}",
             end=' ')
 
 
 def print_spent(data, real_total):
+    """
+
+
+    :param data:
+    :param real_total:
+    :return:
+
+    ```
+        --------------------------------------------------------------------------------
+        INDEX	ACTIV|SLEEP|TOTAL (PERC)	STATUS		DETAIL
+        -	00:00|00:00|00:00 (  0%) 	NOCAT
+        A	03:30|00:05|03:35 ( 60%) 	MISC
+        B	00:00|00:37|00:37 ( 10%) 	EXERCISES
+        C	00:00|01:48|01:48 ( 30%) 	LUNCH
+        --------------------------------------------------------------------------------
+    ```
+    """
     total = 0
     away = 0
     print("-" * 80)
@@ -381,25 +354,11 @@ def print_spent(data, real_total):
         away += item.get('away', 0)
 
         print(
-            f"{colored(item['index'], 'magenta'):}\t{colored(str_print(item['minutes']), 'green')}|{colored(str_print(item.get('away', 0)), 'red')}|{colored(str_print(item.get('away', 0) + item.get('minutes', 0)), 'blue')} ({colored(str_percent_print(item['minutes'], real_total), 'blue')})",
+            f"{colored(item['index'], 'magenta'):}\t{colored(str_print(item['minutes']), 'green')}|{colored(str_print(item.get('away', 0)), 'red')}|{colored(str_print(item.get('away', 0) + item.get('minutes', 0)), 'blue')} ({colored(str_percent_print(item.get('away', 0) + item.get('minutes', 0), real_total), 'blue')})",
             "\t" + status,
             f"\t\t{item.get('detail', '-')}")
     print("-" * 80)
 
-
-def _load_file(file, log=False, today=False):
-    try:
-        f = open(file, 'r')
-        data = f.readlines()
-        f.close()
-        # if it's today, then we add an "active" state right now, so we print
-        # that we are online. otherwise the chart would be NOCAT.
-        if today and not log:
-            data.append("ACTIVE$%s\n" % datetime.now().strftime('%H:%M'))
-
-        return read_file(data)
-    except:
-        return []
 
 
 def percent(start, workday=8):
@@ -564,7 +523,7 @@ if __name__ == '__main__':
                 t_beg=beg, t_end=end)
 
             print_day_datail(daily_data, hourly_data, minute_data, time_spent,
-                             detail=detail, daily_log=daily_log, t_beg=beg,
+                             daily_log=daily_log, t_beg=beg,
                              t_end=end)
         else:
             print_h_inline(minutes, t_beg=beg, t_end=end)
