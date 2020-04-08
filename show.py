@@ -180,6 +180,8 @@ def print_day_datail(daily_data, hourly_data, minute_data, time_spent,
     for time_data, status_data in minute_data.items():
         # key is h:m
         h, m = time_data.split(':')
+        if int(m) == 0:
+            print(colored(f"{int(h):02d}:", "grey", "on_blue"), end='')
         if int(m) == 59:
             end = '\n'
         else:
