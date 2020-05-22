@@ -37,6 +37,7 @@ if __name__ == '__main__':
     last = args[0].last
     filename = datetime.now().strftime('%Y%m%d') + "_log.txt"
     status = None
+
     if last:
         # in case os last, we find the last that is not -
         data = _load_file(filename, log=True)

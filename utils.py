@@ -80,7 +80,11 @@ def str_percent_print(p, t, space=True, reverse=False):
     "8" > "  8"
     To mantain aligment
     """
-    p = round((p / t) * 100)
+    try:
+        p = round((p / t) * 100)
+    except:
+        # in case there's no data
+        p = 0.0
     res = str(p)
     if reverse:
         res = res + "%"

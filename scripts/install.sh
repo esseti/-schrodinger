@@ -14,8 +14,8 @@ sed -e "s@\${PRJ}@$PRJ@"  wakeup.tmpl > $HOME/.wakeup
 chmod +x $HOME/.wakeup
 # place the plist
 echo "Install plist"
-sed -e "s@\${HOME}@$HOME@"  com.stefanotranquillini.sleepwatcher.plist.tmpl > $HOME/Library/LaunchAgents/com.stefanotranquillini.shutdown.plist
-launchctl load $HOME/Library/LaunchAgents/com.stefanotranquillini.shutdown.plist
+sed -e "s@\${HOME}@$HOME@"  com.stefanotranquillini.sleepwatcher.plist.tmpl > $HOME/Library/LaunchAgents/com.stefanotranquillini.sleepwatcher.plist
+launchctl load $HOME/Library/LaunchAgents/com.stefanotranquillini.sleepwatcher.plist
 # place the plist in shared folder and as a root
 sudo sh -c 'sed -e "s@\${HOME}@$HOME@" com.stefanotranquillini.shutdown.plist.tmpl > /Library/LaunchDaemons/com.stefanotranquillini.shutdown.plist'
 sleep 1

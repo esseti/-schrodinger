@@ -45,6 +45,9 @@ argparser.add_argument('-l', dest='daily_log',
 argparser.add_argument('--cron', dest='cron',
                        help="cron notification", action='store_true',
                        required=False)
+argparser.add_argument('--cron-check', dest='croncheck',
+                    help="cron notification missing log, so it notifies you", action='store_true',
+                    required=False)                   
 args = argparser.parse_args()
 
 
@@ -121,11 +124,15 @@ def print_summary(present, away, total):
     str_a = str_print(away)
     total += away + present or 1.0
     str_t = str_print(total)
-    str_percentage = str_percent_print(present, total)
+    wh = cfg.get('WORKING_HOURS',8)
+    str_percentage = str_percent_print(present,total)
+    str_wh = str_percent_print(total,wh*60)
     print("[" + colored(f"{str_p}/", "green") +
           colored(f"{str_a}", "red") +
           colored(f"|{str_t}|", "blue") +
-          colored(f"({str_percentage})", "grey", "on_green") +
+          colored(f"{str_percentage}", "grey", "on_green")+ 
+          "," + 
+          colored(f"{str_wh}", "grey", "on_magenta") +
           "]")
 
 
@@ -210,7 +217,8 @@ def print_day_datail(daily_data, hourly_data, minute_data, time_spent,
             print_hourly_data(hourly_data[str(h)], time_spent)
             print("")
 
-    print_summary(daily_data['active'], daily_data['away'], 0)
+    print_summary(daily_data['active'],
+                  daily_data['away'], 0)
 
 
 def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, total):
@@ -244,9 +252,12 @@ def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, t
     """
     print(start_time)
     index_name = dict()
+    hidden = []
     elements = {}
     for k, v in time_spent.items():
         index_name[v['index']] = k
+        if v.get('hidden', False):
+            hidden.append(k)
     for h in range(int(start), int(end)):
         hour_data = hourly_data.get(str(h))
         if hour_data:
@@ -274,7 +285,8 @@ def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, t
             end="|")
     print()
     for i, v in elements.items():
-        print(
+        if i.upper() not in hidden:
+            print(
             f"{i}", end="|")
 
 
@@ -361,9 +373,14 @@ def print_spent(data, real_total):
             f"\t\t{item.get('detail', '-')}")
     print("-" * 80)
 
+def notify(title, text):
+    import osascript
+    return osascript.run(
+        f'display notification "{text}" with title "{title}" ')
 
-
-def percent(start, workday=8):
+def percent(start, log, workday=None):
+    if not workday:
+        workday = cfg.get('WORKING_HOURS', 8)
     now_dt = datetime.now()
     now = datetime.strptime(f"{now_dt.hour}:{now_dt.minute}", "%H:%M")
     start = start
@@ -372,9 +389,8 @@ def percent(start, workday=8):
     spent = mins(now - start)
     percent = float(float(spent) / float(total))
     percent = round(percent * 100)
-    import osascript
-    code, out, err = osascript.run(
-        f'display notification "spent {percent}%" with title "{now.hour}:{now.minute} ({start.strftime("%H:%M")}-{end.strftime("%H:%M")})" ')
+    code, out, err = notify(
+        f'{now_dt.strftime("%H:%M")} ({start.strftime("%H:%M")}-{end.strftime("%H:%M")})', f"spent {percent}% (last log {log})")
 
 
 def calculate_day(data, minutes, t_beg, t_end, log_data=[]):
@@ -404,8 +420,8 @@ def calculate_day(data, minutes, t_beg, t_end, log_data=[]):
 
     # loop for all the time and minutes (in step of 60/delta minutes)
     i = 0
-    old_log = ""
     minute_data = dict()
+    # if it has a -
     for h in range(t_beg, t_end):
         hourly_data[str(h)] = dict()
         # detail have hours on the left side.
@@ -420,6 +436,10 @@ def calculate_day(data, minutes, t_beg, t_end, log_data=[]):
                 if status == "ACTIVE":
                     status = "SLEEP"
                 log = log[1:]
+                try:
+                    time_spent[log]['hidden']=True
+                except:
+                    pass
             # init time spent if does not exists
             if log not in time_spent:
                 if log != "NOCAT":
@@ -484,13 +504,22 @@ if __name__ == '__main__':
     dc = args.detail_category
     daily_log = args.daily_log
     os.chdir(cfg['FOLDER'])
-    if args.cron:
+    if args.cron or args.croncheck:
         day = datetime.now()
         day = day.strftime('%Y%m%d')
         data = _load_file("%s.txt" % (day), today=True)
-        # print(data)
+        log_data = _load_file("%s_log.txt" % (day), log=True)
+        rightnow = datetime.now()
+        log = get_status(rightnow.hour, rightnow.minute,log_data,True)[0]
         start = data[0]['time']
-        percent(start)
+        if args.cron:
+            percent(start, log)
+        if args.croncheck:
+            # if log is missing
+            if not log or log == "NOCAT":
+                notify("Missing log", "add it")
+
+        
 
     elif args.all:
         # if all, print all files it founds
