@@ -39,13 +39,17 @@ if __name__ == '__main__':
     status = None
 
     if last:
+        print(last)
         # in case os last, we find the last that is not -
         data = _load_file(filename, log=True)
-        for i in range(len(data)-1,0,-1):
+        for i in range(len(data)-1,-1,-1):
             last_data = data[i]
+            
             status = last_data['status']
             if not status.startswith('-'):
                 break
+            else:
+                status = None
         if not status:
             raise Exception("can't find a last")
     else:
