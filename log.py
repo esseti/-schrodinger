@@ -39,7 +39,6 @@ if __name__ == '__main__':
     status = None
 
     if last:
-        print(last)
         # in case os last, we find the last that is not -
         data = _load_file(filename, log=True)
         for i in range(len(data)-1,-1,-1):
