@@ -4,7 +4,7 @@ from datetime import timedelta, datetime
 import os
 from config import cfg
 import calendar
-from utils import _load_file, read_file, mins, get_status,str_percent_print, str_print
+from utils import _load_file, read_file, mins, get_status,str_percent_print, str_print, time_from_mins
 
 try:
     from termcolor import colored
@@ -19,6 +19,10 @@ argparser = argparse.ArgumentParser(description="Show presence")
 
 argparser.add_argument('-a', dest='all',
                        help="all days", action='store_true', required=False)
+argparser.add_argument('-ay', dest='all_year',
+                       help="when `-a` prints just this year", required=False)
+argparser.add_argument('-am', dest='all_month',
+                       help="when `-a` prints just this month",  required=False)
 argparser.add_argument('-m', type=int, dest='min',
                        help="minutes per slot", required=False)
 argparser.add_argument('-d', dest='day',
@@ -155,12 +159,17 @@ def print_day(name, t_beg, t_end, minutes, data):
     my_date = datetime.strptime(name.split('.')[0], "%Y%m%d")
     day_week = calendar.day_name[my_date.weekday()][0]
     print(name.split('.')[0] + day_week, end=" ")
+    total = 0
     for h in range(t_beg, t_end):
         for m in range(0, 60, minutes):
             status, _, _ = get_status(h, m, data)
             print_minute(m, status)
-        print(" ", end="")
-    print("")
+            if status=="ACTIVE":
+                total += minutes
+        print(f" ", end="")
+    # print(total)
+    print(f" {time_from_mins(total)}")
+    return total
 
 
 def print_day_datail(daily_data, hourly_data, minute_data, time_spent,
@@ -433,13 +442,19 @@ def calculate_day(data, minutes, t_beg, t_end, log_data=[]):
             # in case it starts with -, we default set it to sleep
             if log.startswith('-'):
                 # only when status exists, it may be NOCAT
-                if status == "ACTIVE":
+
+                if status != "NOCAT":
                     status = "SLEEP"
                 log = log[1:]
                 try:
                     time_spent[log]['hidden']=True
                 except:
                     pass
+            if log.startswith('+'):
+                # only when status exists, it may be NOCAT
+                # if status != "NOCAT":
+                status = "ACTIVE"
+                log = log[1:]
             # init time spent if does not exists
             if log not in time_spent:
                 if log != "NOCAT":
@@ -524,14 +539,25 @@ if __name__ == '__main__':
     elif args.all:
         # if all, print all files it founds
         print_h_inline(minutes, t_beg=beg, t_end=end)
-        for file in sorted(glob.glob("*.txt")):
+        total = 0
+        counted = 0
+        y = datetime.now().year
+        if args.all_year:
+            y = args.all_year
+        m = "*"
+        if args.all_month:
+            m = args.all_month
+        for file in sorted(glob.glob(f"{y}{m}*.txt")):
+            
             if "_log" not in file:
+                counted+=1
                 f = open(file, 'r')
                 data = read_file(f.readlines())
 
-                print_day(name=file, data=data, minutes=minutes, t_beg=beg,
-                          t_end=end)
+                total += print_day(name=file, data=data, minutes=minutes, t_beg=beg,
+                          t_end=end)                
                 f.close()
+        print(f"COUNTED DAYS: {counted}, TOTAL HOURS LOGGED: {str_print(total)}, AVERAGE: {str_print(total/counted)}")
     else:
         # single day printing
         today = True
