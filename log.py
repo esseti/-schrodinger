@@ -53,6 +53,6 @@ if __name__ == '__main__':
             raise Exception("can't find a last")
     else:
         status = " ".join(e for e in args[1])
-
+    print(status)
     # if args
     _write(filename, status.strip(), time)

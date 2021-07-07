@@ -43,6 +43,12 @@ def _load_file(file, log=False, today=False):
         return []
 
 
+def time_from_mins(mins):
+    """
+    Transforms minutes in hour:minutes
+    """
+    return str(timedelta(minutes=mins))[:-3]
+
 def mins(td):
     """
     Transforms the timedlta in muinutes
