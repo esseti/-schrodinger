@@ -39,13 +39,15 @@ if __name__ == '__main__':
     status = None
 
     if last:
-        # in case os last, we find the last that is not -
+        # in case of last, we find the last that is not -
         data = _load_file(filename, log=True)
-        for i in range(len(data)-1,-1,-1):
+        current = data[len(data) - 1]['status']
+        print(type(current))
+        for i in range(len(data) - 1, -1, -1):
             last_data = data[i]
-            
             status = last_data['status']
-            if not status.startswith('-'):
+            if not status.startswith('-') \
+                    and status != current:
                 break
             else:
                 status = None

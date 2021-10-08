@@ -217,7 +217,7 @@ def print_day_datail(daily_data, hourly_data, minute_data, time_spent,
         print("")
         print_daily_log(hourly_data, time_spent, t_beg, t_end,
                         daily_data['start_time'], daily_data['end_time'],
-                        daily_data['total'])
+                        daily_data['total'],daily_data['total']-daily_data['away'])
         print("")
     else:
         #prints
@@ -230,7 +230,7 @@ def print_day_datail(daily_data, hourly_data, minute_data, time_spent,
                   daily_data['away'], 0)
 
 
-def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, total):
+def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, total,total_active):
     """
     Prints the summary of the day logs in the -l version, easier to copy/paste
 
@@ -263,6 +263,7 @@ def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, t
     index_name = dict()
     hidden = []
     elements = {}
+    elements_active = {}
     for k, v in time_spent.items():
         index_name[v['index']] = k
         if v.get('hidden', False):
@@ -276,28 +277,42 @@ def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, t
                 for k, v in hour_data.items():
                     name = index_name[k].capitalize()
                     spent = v.get('active', 0) + v.get('sleep', 0)
+                    active = v.get('active', 0)
+                    if name.startswith('-'):
+                        active = 0
+                    if name.startswith('+'):
+                        active = spent
                     print(
                         f"{name} ({str_print(spent)}|{str_percent_print(spent, 60, space=False)})",
                         end=" ")
                     if name in elements:
                         elements[name] += spent
+                        elements_active[name] += active
                     else:
                         elements[name] = spent
+                        elements_active[name] = active
             except:
                 pass
             print()
     print(end_time)
     print()
+    total_without_hidden = 0
+    tot_percent = 0
+    print(str_print(total),end='\t')
     for i, v in elements.items():
+        tot_percent +=round((v / total) * 100)
         print(
             f"{i} ({str_print(v)}|{str_percent_print(v, total, space=False)})",
             end="|")
     print()
-    for i, v in elements.items():
+    print(str_print(total_active),end='\t')
+    tot_percent = 0
+    for i, v in elements_active.items():
         if i.upper() not in hidden:
+            tot_percent +=round((v / total_active) * 100)
             print(
-            f"{i}", end="|")
-
+            f"{i} ({str_print(v)}|{str_percent_print(v, total_active, space=False)})",end="|")
+    print()
 
 def print_hourly_data(hourly_data, ld):
     """
