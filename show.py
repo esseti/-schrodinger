@@ -46,6 +46,9 @@ argparser.add_argument('-dc', dest='detail_category',
 argparser.add_argument('-l', dest='daily_log',
                        help="Print detail of the daily log to be copied.",
                        action='store_true', required=False)
+argparser.add_argument('-alr', dest='daily_log_all_reverse',
+                       help="Print detail of the daily log to be copied. for all or month and in reverse",
+                       action='store_true', required=False)
 argparser.add_argument('--cron', dest='cron',
                        help="cron notification", action='store_true',
                        required=False)
@@ -140,7 +143,7 @@ def print_summary(present, away, total):
           "]")
 
 
-def print_day(name, t_beg, t_end, minutes, data):
+def print_day(name, t_beg, t_end, minutes, data,end_string="\n", mini = False):
     """
     Print the inline day
 
@@ -158,17 +161,20 @@ def print_day(name, t_beg, t_end, minutes, data):
     """
     my_date = datetime.strptime(name.split('.')[0], "%Y%m%d")
     day_week = calendar.day_name[my_date.weekday()][0]
+    
     print(name.split('.')[0] + day_week, end=" ")
     total = 0
     for h in range(t_beg, t_end):
         for m in range(0, 60, minutes):
             status, _, _ = get_status(h, m, data)
-            print_minute(m, status)
+            if not mini:
+                print_minute(m, status)
             if status=="ACTIVE":
                 total += minutes
-        print(f" ", end="")
+        if not mini:
+            print(f" ", end="")
     # print(total)
-    print(f" {time_from_mins(total)}")
+    print(f" {time_from_mins(total)}",end=end_string)
     return total
 
 
@@ -230,7 +236,7 @@ def print_day_datail(daily_data, hourly_data, minute_data, time_spent,
                   daily_data['away'], 0)
 
 
-def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, total,total_active):
+def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, total,total_active,multi_days=False):
     """
     Prints the summary of the day logs in the -l version, easier to copy/paste
 
@@ -259,7 +265,8 @@ def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, t
         Misc|Exercises|Lunch|
     ```
     """
-    print(start_time)
+    if not multi_days:
+        print(start_time)
     index_name = dict()
     hidden = []
     elements = {}
@@ -271,7 +278,8 @@ def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, t
     for h in range(int(start), int(end)):
         hour_data = hourly_data.get(str(h))
         if hour_data:
-            print(f"{h}:", end='')
+            if not multi_days:
+                print(f"{h}:", end='')
             #
             try:
                 for k, v in hour_data.items():
@@ -282,7 +290,8 @@ def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, t
                         active = 0
                     if name.startswith('+'):
                         active = spent
-                    print(
+                    if not multi_days:
+                        print(
                         f"{name} ({str_print(spent)}|{str_percent_print(spent, 60, space=False)})",
                         end=" ")
                     if name in elements:
@@ -293,27 +302,57 @@ def print_daily_log(hourly_data, time_spent, start, end, start_time, end_time, t
                         elements_active[name] = active
             except:
                 pass
-            print()
-    print(end_time)
-    print()
-    total_without_hidden = 0
+            if not multi_days:
+                print()
+    if not multi_days:
+        print(end_time)
+        print(colored("All ",'yellow'))
     tot_percent = 0
-    print(str_print(total),end='\t')
+    if not multi_days:
+        print(colored(str_print(total),'yellow'),end='\t')
+    lunch_time = 0
     for i, v in elements.items():
+        if 'lunch' in i.lower():
+            lunch_time+=v
+        if 'afk' in i.lower():
+            lunch_time += v
         tot_percent +=round((v / total) * 100)
-        print(
-            f"{i} ({str_print(v)}|{str_percent_print(v, total, space=False)})",
+        if not multi_days:
+            print(colored(
+            f"{i} ({str_print(v)}|{str_percent_print(v, total, space=False)})", 'yellow'),
             end="|")
-    print()
-    print(str_print(total_active),end='\t')
+    if not multi_days:
+        print()
+        print(colored("Active",'green'))
+        print(colored(str_print(total_active),'green'),end='\t')
     tot_percent = 0
     for i, v in elements_active.items():
         if i.upper() not in hidden:
-            tot_percent +=round((v / total_active) * 100)
-            print(
-            f"{i} ({str_print(v)}|{str_percent_print(v, total_active, space=False)})",end="|")
+            if total_active>0:
+                tot_percent +=round((v / total_active) * 100)
+            else:
+                tot_percent = 0
+            if not multi_days:
+                print(colored(
+            f"{i} ({str_print(v)}|{str_percent_print(v, total_active, space=False)})", 'green'),end="|")
+    if not multi_days:
+        print()
+        print("All except lunch and AFK")
+    # this is just for lunch time removeal
+    total -=lunch_time
+    if not multi_days:
+        print(colored(str_print(total),'magenta'),end='\t')
+    for i, v in elements.items():
+        if 'lunch' in i.lower():
+            continue
+        if 'afk' in i.lower():
+            continue
+        tot_percent +=round((v / total) * 100)
+        print(colored(
+            f"{i} ({str_print(v)}|{str_percent_print(v, total, space=False)})",'magenta'),
+            end="|")
     print()
-
+    
 def print_hourly_data(hourly_data, ld):
     """
     prints the hourly data colored
@@ -468,7 +507,8 @@ def calculate_day(data, minutes, t_beg, t_end, log_data=[]):
             if log.startswith('+'):
                 # only when status exists, it may be NOCAT
                 # if status != "NOCAT":
-                status = "ACTIVE"
+                if status == "SLEEP":
+                    status = "ACTIVE"
                 log = log[1:]
             # init time spent if does not exists
             if log not in time_spent:
@@ -483,27 +523,27 @@ def calculate_day(data, minutes, t_beg, t_end, log_data=[]):
 
                 end_time = f"{h}:{m}"
                 present += minutes
-                time_spent[log]['minutes'] = time_spent[log]['minutes'] + 1
+                time_spent[log]['minutes'] = time_spent[log]['minutes'] + minutes
                 if log_det not in time_spent[log]['detail']:
                     time_spent[log]['detail'] += log_det
                 try:
                     hourly_data[str(h)][time_spent[log]
-                    ['index']]['active'] += 1
+                    ['index']]['active'] += minutes
                 except:
                     hourly_data[str(h)][time_spent[log]['index']
-                    ] = dict(active=1, sleep=0)
+                    ] = dict(active=minutes, sleep=0)
             elif status == "SLEEP":
                 # we keep track of the time of the task as well, maybe is a task away from the pc
                 away += minutes
-                time_spent[log]['away'] = time_spent[log]['away'] + 1
+                time_spent[log]['away'] = time_spent[log]['away'] + minutes
                 if log_det not in time_spent[log]['detail']:
                     time_spent[log]['detail'] += log_det
 
                 try:
-                    hourly_data[str(h)][time_spent[log]['index']]['sleep'] += 1
+                    hourly_data[str(h)][time_spent[log]['index']]['sleep'] += minutes
                 except:
                     hourly_data[str(h)][time_spent[log]['index']
-                    ] = dict(sleep=1, active=0)
+                    ] = dict(sleep=minutes, active=0)
             elif status != 'NOCAT':
                 # any other category
                 total += minutes
@@ -562,15 +602,42 @@ if __name__ == '__main__':
         m = "*"
         if args.all_month:
             m = args.all_month
-        for file in sorted(glob.glob(f"{y}{m}*.txt")):
+        if args.daily_log_all_reverse:
+            file_list = sorted(glob.glob(f"{y}{m}*.txt"),reverse=True)
+        else:
+            file_list = sorted(glob.glob(f"{y}{m}*.txt"))
+        if not args.daily_log_all_reverse:
+                print(colored("If you want to have an overview of HH:MM and %.  use `-alr` for more precision",'red'))
+        for file in file_list:
             
             if "_log" not in file:
                 counted+=1
                 f = open(file, 'r')
                 data = read_file(f.readlines())
-
-                total += print_day(name=file, data=data, minutes=minutes, t_beg=beg,
-                          t_end=end)                
+                end_string = "\n"
+                if args.daily_log:
+                    
+                    minutes = 10
+                    end_string=" "
+                if not args.daily_log_all_reverse:
+                    # the counting may not work otherwise
+                    
+                    total += print_day(name=file, data=data, minutes=minutes, t_beg=beg,
+                          t_end=end,end_string=end_string) 
+                else:
+                    minutes = 1
+                    total += print_day(name=file, data=data, minutes=minutes, t_beg=beg,
+                          t_end=end,end_string=end_string, mini=True) 
+                if args.daily_log:
+                    file = file.split(".")[0]+"_log.txt"
+                    log_data = _load_file(file, log=True)
+                    daily_data, hourly_data, minute_data, time_spent = calculate_day(
+                data=data, minutes=minutes, log_data=log_data,
+                t_beg=beg, t_end=end)
+                    print_daily_log(hourly_data, time_spent, beg, end,
+                        daily_data['start_time'], daily_data['end_time'],
+                        daily_data['total'],daily_data['total']-daily_data['away'], multi_days=True)
+                                   
                 f.close()
         print(f"COUNTED DAYS: {counted}, TOTAL HOURS LOGGED: {str_print(total)}, AVERAGE: {str_print(total/counted)}")
     else:
